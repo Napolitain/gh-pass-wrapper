@@ -1,0 +1,35 @@
+name: Flake Check
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  flake-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@630ae543ea3a38a9a4166f03376c02c50f408342 # v31
+
+      - name: Check and test flake
+        run: nix flake check --print-build-logs
+
+      - name: Evaluate aarch64-linux outputs
+        run: |
+          nix eval --raw .#packages.aarch64-linux.default.drvPath
+          nix eval --raw .#checks.aarch64-linux.wrapper.drvPath
+
+      - name: Check formatting
+        run: nix fmt -- --check flake.nix package.nix tests/wrapper.nix
+
+      - name: Lint Nix
+        run: nix run --inputs-from . nixpkgs#statix -- check .
